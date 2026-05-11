@@ -131,22 +131,32 @@ def validate_tg263(input_string: str):
     else:
         category = "NonTarget"
 
-
+    subcategories = ""
 
     if category == "NonTarget" :   
         # Remove qualifiers
         qualifiers = ['_DCMtags', '_DO']
-        name = next((name[:-len(q)] for q in qualifiers if name.endswith(q)), name)
+        nameout = next((name[:-len(q)] for q in qualifiers if name.endswith(q)), name)
+        if nameout != name:
+            subcategories = "+ Qualifier" + subcategories
+        name = nameout
 
         # Remove PRV Designator
         m = re.match(r'^(.+)_PRV(\d{2})?$', name)
         if m:
-            name = m.group(1)
+            nameout = m.group(1)
+        if nameout != name:
+            subcategories = "+ PRV" + subcategories
+        name = nameout
+        
 
         # Remove Wall Designator
         m = re.match(r'^(.+)_Wall(\d{2})?$', name)
         if m:
-            name = m.group(1)
+            nameout = m.group(1)
+        if nameout != name:
+            subcategories = "+ Wall" + subcategories
+        name = nameout
 
         # Remove Spatial Designators
         spatialdesignators_end = [
@@ -161,67 +171,107 @@ def validate_tg263(input_string: str):
             'LS_', 'LI_','RS_', 'RI_'
         ]
 
-        name = next((name[:-len(q)] for q in spatialdesignators_end  if name.endswith(q)),   name)
-        name = next((name[len(q):]  for q in spatialdesignators_start if name.startswith(q)), name)
+        nameout_start = next((name[len(q):]  for q in spatialdesignators_start if name.startswith(q)), name)
+        nameout_end = next((name[:-len(q)] for q in spatialdesignators_end  if name.endswith(q)),   name)
+
+        if nameout_start != name:
+            subcategories = "+ SpatialDesignator" + subcategories
+            name = nameout_start
+        elif nameout_end != name:
+            subcategories = "+ SpatialDesignator" + subcategories
+            name = nameout_end
 
         # Remove partial structure Designator
         partialstructuredesignator = ['~']
-        name = next((name[:-len(q)] for q in partialstructuredesignator if name.endswith(q)), name)
+        nameout = next((name[:-len(q)] for q in partialstructuredesignator if name.endswith(q)), name)
+        if nameout != name:
+            subcategories = "+ PartialStructure" + subcategories
+        name = nameout
 
 
     elif category == "Target":
         
         # Remove imaging modality qualifier (e.g., _CT, _PT1, _PT1CT1)
-        name = re.sub(r'_(?:(?:CT|PT|MR|SP)\d*)+$', '', name)
+        nameout = re.sub(r'_(?:(?:CT|PT|MR|SP)\d*)+$', '', name)
+        if nameout != name:
+            subcategories = "+ ImageBasis" + subcategories 
+        name = nameout
 
         # Remove respiratory management qualifiers    
-        name = re.sub(r'_(?:(?:FB|BH|EXBH|INBH|Avg|Amp|Min|MinIP)\d*)+$', '', name)
+        nameout = re.sub(r'_(?:(?:FB|BH|EXBH|INBH|Avg|Amp|Min|MinIP)\d*)+$', '', name)
+        if nameout != name:
+            subcategories = "+ RespiratoryManagement" + subcategories 
+        name = nameout
 
         # Remove Respiratory Phase management qualifiers (e.g., _Phase1, _Phase12, _Phase1-2, _Phase12-34)
-        name = re.sub(r'_Phase\d+(?:-\d+)?$', '', name)
+        nameout = re.sub(r'_Phase\d+(?:-\d+)?$', '', name)
+        if nameout != name:
+            subcategories = "+ RespiratoryPhaseManagement" + subcategories 
+        name = nameout  
         
         # Remove Revision Qualifier (e.g., _Rev1, _Rev2)
-        name = re.sub(r'_Rev\d+$', '', name)
+        nameout = re.sub(r'_Rev\d+$', '', name)
+        if nameout != name:
+            subcategories = "+ Revision" + subcategories 
+        name = nameout  
 
         # Remove Retreatment Qualifier (e.g.,_ReTx1, _ReTx2)
-        name = re.sub(r'_ReTx\d+$', '', name)
+        nameout = re.sub(r'_ReTx\d+$', '', name)
+        if nameout != name:
+            subcategories = "+ Retreatment" + subcategories
+        name = nameout
 
         # Remove Expansion Volume Qualifier (e.g., _Exp1, _Exp2)
-        name = re.sub(r'_EV\d+$', '', name)
+        nameout = re.sub(r'_EV\d+$', '', name)
+        if nameout != name:
+            subcategories = "+ ExpansionVolume" + subcategories
+        name = nameout
 
         # Remove Cropping Qualifier (e.g. -03, -05  etc.)
-        name = re.sub(r'-\d{2}$', '', name)
+        nameout = re.sub(r'-\d{2}$', '', name)
+        if nameout != name:
+            subcategories = "+ Cropping" + subcategories
+        name = nameout
 
         # Remove dose-fractionation Qualifier(e.g., _4500cGyx25, _45p0Gyx5)
-        name = re.sub(r'_(?:\d{4}|\d{2}p?\d)c?Gyx\d+$', '', name)
+        nameout = re.sub(r'_(?:\d{4}|\d{2}p?\d)c?Gyx\d+$', '', name)
+        if nameout != name:
+            subcategories = "+ DoseFractionation" + subcategories
+        name = nameout
 
         # Remove -<tg263root>_PRV<XX> or NOT<tg263root>_PRV<XX> suffix (e.g., -Heart_PRV05, NOTLung_PRV10)
         prv_suffix_pattern = r'(?:-|NOT|AND)(?:' + '|'.join(re.escape(r) for r in tg263roots) + r')(?:_PRV\d+)?$'
-        name = re.sub(prv_suffix_pattern, '', name)
+        nameout = re.sub(prv_suffix_pattern, '', name)
+        if nameout != name:
+            subcategories = "+ PRV" + subcategories
+        name = nameout
         
         # Remove Low/High Dose Designators
         qualifiers = ['_Low', '_High']
-        name = next((name[:-len(q)] for q in qualifiers if name.endswith(q)), name)
+        nameout = next((name[:-len(q)] for q in qualifiers if name.endswith(q)), name)
+        if nameout != name:
+            subcategories = " + RxDoseRelative" + subcategories
+        name = nameout
 
         # Remove _Mid Designator
         m = re.match(r'^(.+)_Mid(\d{2})?$', name)
         if m:
-            name = m.group(1)
+            nameout = m.group(1)
+        if nameout != name:
+            subcategories = " + RxDoseRelative" + subcategories
+        name = nameout
 
         # Remove relative dose Designator with numeric value (e.g., _50Gy, _80cGy)
         nameout = re.sub(r'_\d+(?:c?Gy)?$', '', name)
         if nameout != name:
-            category = category + " + Dose"
+            subcategories = "+ RxDoseAbsolute" + subcategories
         name = nameout
 
         # Remove numerical Designators for numbering targets (e.g., 01, 02, etc.)
         nameout = re.sub(r'\d{2}+$', '', name)
         if nameout != name:
-            category = category + " + Enumerated"
+            subcategories = "+ Enumerated" + subcategories
         name = nameout
-
-        # Remove target risk level designators(e.g., GTVpHR, GTVnLR)
-        name = re.sub(r'(HR|IR|LR)$', '', name)
 
 
         # Remove Spatial Designators
@@ -237,18 +287,38 @@ def validate_tg263(input_string: str):
             'LS_', 'LI_','RS_', 'RI_'
         ]
 
-        name = next((name[:-len(q)] for q in spatialdesignators_end  if name.endswith(q)),   name)
-        name = next((name[len(q):]  for q in spatialdesignators_start if name.startswith(q)), name)
+        nameout_start = next((name[len(q):]  for q in spatialdesignators_start if name.startswith(q)), name)
+       
+       
+        nameout_end = next((name[:-len(q)] for q in spatialdesignators_end  if name.endswith(q)),   name)
+
+        if nameout_start != name:
+            subcategories = "+ SpatialDesignator" + subcategories
+            name = nameout_start
+        elif nameout_end != name:
+            subcategories = "+ SpatialDesignator" + subcategories
+            name = nameout_end
+       
 
 
         # Remove _<tg263root> suffix (e.g., _Lung, _Heart)
         root_suffix_pattern = r'_(?:' + '|'.join(re.escape(r) for r in tg263roots) + r')$'
-        name = re.sub(root_suffix_pattern, '', name)
+        nameout = re.sub(root_suffix_pattern, '', name)
+        if nameout != name:
+            subcategories = "+ RootStructure" + subcategories
+        name = nameout
 
-
+     # Remove target risk level designators(e.g., GTVp_HR, GTVn_LR)
+        nameout = re.sub(r'(_HR|_IR|_LR)$', '', name)
+        if nameout != name:
+            subcategories = "+ RiskLevel" + subcategories
+        name = nameout
 
         # Remove target classifier designators(e.g., GTVn, GTVp)
-        name = re.sub(r'(n|p|sb|par|v|vas)$', '', name)
+        nameout = re.sub(r'(n|p|sb|par|v|vas)$', '', name)
+        if nameout != name:
+            subcategories = "+ TargetClassifier" + subcategories
+        name = nameout
 
     # Find nearest match in tg263roots
     matches = difflib.get_close_matches(name, tg263roots, n=1, cutoff=0.0)
@@ -259,7 +329,10 @@ def validate_tg263(input_string: str):
         category = "Invalid"
     
     if is_trainee_structure:
-        category = "Trainee " + category
+        category = "Trainee " + category 
+
+    if category != "Invalid" and len(subcategories) > 0:
+        category = category + subcategories
 
     return category, name, nearest_match
 
